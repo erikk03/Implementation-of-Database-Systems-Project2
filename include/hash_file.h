@@ -1,6 +1,8 @@
+#include <math.h>
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
-
+#define GLOBAL_DEPT 2 // you can change it if you want
+//#define SIZE_OF_TABLE pow(2,GLOBAL_DEPT)
 typedef enum HT_ErrorCode {
   HT_OK,
   HT_ERROR
@@ -12,6 +14,21 @@ typedef struct Record {
 	char surname[20];
 	char city[20];
 } Record;
+
+// typedef struct {
+//     int global_depth;
+//     BF_Block* header_block;
+// } HT_info;
+
+typedef struct HashTable {
+  int global_depth;
+  Bucket* table[];
+} HashTable;
+
+typedef struct Bucket {
+	int local_depth;
+	BF_Block* block;
+} Bucket;
 
 /*
  * Η συνάρτηση HT_Init χρησιμοποιείται για την αρχικοποίηση κάποιον δομών που μπορεί να χρειαστείτε. 
