@@ -16,27 +16,30 @@ typedef struct Record {
 	char city[20];
 } Record;
 
-typedef struct Global_array {
-	int count;
-	int file_array[MAX_FILES];
-	HT_info* info;
-} Global_Array;
-
-typedef struct HT_info {
-	HashTable* hash_table;
-}HT_info;
-
 typedef struct Bucket {
 	int local_depth;
 	BF_Block* block;
 } Bucket;
 
+typedef struct Directory {
+	long int id;
+	Bucket* pointer;
+} Directory;
+
 typedef struct HashTable {
   int global_depth;
-  //int id;
-  Bucket* table[];
+  Directory* table[4];
 } HashTable;
 
+typedef struct HT_info {
+	int id;
+	HashTable* hash_table;
+}HT_info;
+
+typedef struct Global_array {
+	int active_files_num;
+	HT_info* file_array[MAX_FILES];
+} Global_Array;
 
 /*
  * Η συνάρτηση HT_Init χρησιμοποιείται για την αρχικοποίηση κάποιον δομών που μπορεί να χρειαστείτε. 
