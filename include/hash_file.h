@@ -2,7 +2,8 @@
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
 #define GLOBAL_DEPT 2 // you can change it if you want
-//#define SIZE_OF_TABLE pow(2,GLOBAL_DEPT)
+#define MAX_FILES 20
+
 typedef enum HT_ErrorCode {
   HT_OK,
   HT_ERROR
@@ -15,20 +16,27 @@ typedef struct Record {
 	char city[20];
 } Record;
 
-// typedef struct {
-//     int global_depth;
-//     BF_Block* header_block;
-// } HT_info;
+typedef struct Global_array {
+	int count;
+	int file_array[MAX_FILES];
+	HT_info* info;
+} Global_Array;
 
-typedef struct HashTable {
-  int global_depth;
-  Bucket* table[];
-} HashTable;
+typedef struct HT_info {
+	BF_Block* header_block;
+}HT_info;
 
 typedef struct Bucket {
 	int local_depth;
 	BF_Block* block;
 } Bucket;
+
+typedef struct HashTable {
+  int global_depth;
+  int id;
+  Bucket* table[];
+} HashTable;
+
 
 /*
  * Η συνάρτηση HT_Init χρησιμοποιείται για την αρχικοποίηση κάποιον δομών που μπορεί να χρειαστείτε. 

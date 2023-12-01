@@ -16,8 +16,17 @@
   }                         \
 }
 
+Global_Array array;
+
+
 HT_ErrorCode HT_Init() {
-  //insert code here
+  //θελω πρακτικα ο πινακας αυτος να μπορει να με οδηγησει 
+  //μεσου του χεντερ μπλοκ στις αναγκαιες πληροφοριες πχ το ιδιο το χας τειμπλ καθε αρχειου(σκεψη)
+  array.count = 0;
+  for (int i = 0; i < MAX_OPEN_FILES; i++) {
+    array.file_array[i] = -1;
+    array.info->header_block = NULL;  //οχι ακριβως, ετσι θελω να εχω ενα για καθε θεση
+  }
   return HT_OK;
 }
 
@@ -27,12 +36,12 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
   int file;                                   				
   CALL_BF(BF_OpenFile(filename, &file));
 
-  BF_Block* header_block;
-  BF_Block_Init(&header_block);
-  CALL_BF(BF_AllocateBlock(file,header_block));
+  HT_info* info;
+  BF_Block_Init(&info->header_block);
+  CALL_BF(BF_AllocateBlock(file,info->header_block));
   
   char* data;
-  data = BF_Block_GetData(header_block);
+  data = BF_Block_GetData(info->header_block);
 
   HashTable* hash_table;
   hash_table->global_depth = depth;
@@ -40,15 +49,22 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 
   memcpy(data,&hash_table,sizeof(HashTable));
 
-  BF_Block_SetDirty(header_block);
-  CALL_BF(BF_UnpinBlock(header_block));
+  BF_Block_SetDirty(info->header_block);
+  CALL_BF(BF_UnpinBlock(info->header_block));
   CALL_BF(BF_Close(file));
 
   return HT_OK;
 }
 
-HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc){
-  //insert code here
+HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
+  int filedesc;
+  CALL_BF(BF_OpenFile(fileName, &filedesc));
+  for (int i = 0; i < MAX_OPEN_FILES; i++) {
+    if (array.file_array[i] == -1 && i == *indexDesc) {
+      array.file_array[i] = filedesc;
+      array.count += 1;
+    } 
+  }
   return HT_OK;
 }
 
