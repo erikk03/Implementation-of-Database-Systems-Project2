@@ -23,7 +23,7 @@ typedef struct Global_array {
 } Global_Array;
 
 typedef struct HT_info {
-	BF_Block* header_block;
+	HashTable* hash_table;
 }HT_info;
 
 typedef struct Bucket {
@@ -33,7 +33,7 @@ typedef struct Bucket {
 
 typedef struct HashTable {
   int global_depth;
-  int id;
+  //int id;
   Bucket* table[];
 } HashTable;
 
