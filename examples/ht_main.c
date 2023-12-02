@@ -65,7 +65,7 @@ int main() {
   BF_Init(LRU);
   
   CALL_OR_DIE(HT_Init());
-  printf("no");
+
   int indexDesc;
   CALL_OR_DIE(HT_CreateIndex(FILE_NAME, GLOBAL_DEPT));
   CALL_OR_DIE(HT_OpenIndex(FILE_NAME, &indexDesc)); 
@@ -84,12 +84,12 @@ int main() {
     r = rand() % 10;
     memcpy(record.city, cities[r], strlen(cities[r]) + 1);
 
-    CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
+    //CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
   }
 
   printf("RUN PrintAllEntries\n");
-  int id = rand() % RECORDS_NUM;
-  CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
+  //int id = rand() % RECORDS_NUM;
+  //CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
   //CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
 
 

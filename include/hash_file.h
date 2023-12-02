@@ -27,14 +27,14 @@ typedef struct Directory {
 } Directory;
 
 typedef struct HashTable {
-  int global_depth;
-  Directory* table[4];
+  	int global_depth;
+ 	Directory *table;
 } HashTable;
 
 typedef struct HT_info {
 	int id;
 	HashTable* hash_table;
-}HT_info;
+} HT_info;
 
 typedef struct Global_array {
 	int active_files_num;
