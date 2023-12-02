@@ -22,7 +22,7 @@ typedef struct Bucket {
 } Bucket;
 
 typedef struct Directory {
-	long int id;
+	char id[32];
 	Bucket* pointer;
 } Directory;
 
@@ -35,6 +35,11 @@ typedef struct HT_info {
 	int id;
 	HashTable* hash_table;
 } HT_info;
+
+typedef struct block_info{
+	int number_of_records;
+	int available_space;
+} HT_block_info;
 
 typedef struct Global_array {
 	int active_files_num;

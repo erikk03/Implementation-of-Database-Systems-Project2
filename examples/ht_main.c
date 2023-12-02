@@ -5,7 +5,7 @@
 #include "bf.h"
 #include "hash_file.h"
 
-#define RECORDS_NUM 1000 // you can change it if you want
+#define RECORDS_NUM 10 // you can change it if you want
 #define GLOBAL_DEPT 2 // you can change it if you want
 #define FILE_NAME "data.db"
 
@@ -84,7 +84,7 @@ int main() {
     r = rand() % 10;
     memcpy(record.city, cities[r], strlen(cities[r]) + 1);
 
-    //CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
+    CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
   }
 
   printf("RUN PrintAllEntries\n");

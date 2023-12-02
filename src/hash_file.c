@@ -31,7 +31,7 @@ HT_ErrorCode HT_Init() {
 }
 
 HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
-	//possible changes: hash_table -> dynamic , might need to change global_array
+	//possible changes: , might need to change global_array
 	
 	CALL_BF(BF_CreateFile(filename));           			
 		
@@ -42,29 +42,25 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	BF_Block_Init(&header_block);
 	CALL_BF(BF_AllocateBlock(file,header_block));
 
-	HashTable* hash_table = (HashTable*) BF_Block_GetData(header_block);
+	HT_info* info;											
+	info = (HT_info*) BF_Block_GetData(header_block);						// Write HT_info to header_block of filename
+	info->id = file; 														// Id of file
+
+	HashTable* hash_table = (HashTable*)(info + sizeof(info));
 	hash_table->global_depth = depth;
 	hash_table->table = (Directory *)malloc(pow(2,hash_table->global_depth) * sizeof(Directory));
+	
 	if (hash_table->table == NULL) {
 			fprintf(stderr, "Memory allocation failed\n");
-			return 1; // Exit with an error code
+			return 1; 														// Exit with an error code
 	}
 
-	//////////////////////////// for realloc ///////////////////
-	//hash_table->global_depth = hash_table->global_depth + 1;
-	//hash_table->table = (Directory *)realloc(hash_table->table, pow(2,hash_table->global_depth) * sizeof(int));
-	///////////////////////////////////////////////////////////
-	
 	for(int i=0; i < (int)pow(2,depth); i++){                              	// Hash table has 2^depth Directories
 		hash_table->table[i].pointer = NULL;                                // NULL because no Buckets created yet
-		hash_table->table[i].id = int_to_bi(i);                             // Directory id in binary. e.x 00,01,10,11 for depth=2
+		strcpy(hash_table->table[i].id, int_to_bi(i, depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
 	}
-	
-	HT_info* info;
-	info = (HT_info*) BF_Block_GetData(header_block);                       // Write HT_info to header_block of filename
-	info->id = file;                                                        // Id of file
-	info->hash_table = hash_table;                                          // Connect HT_info with Hashtable
-	
+																			
+	info->hash_table = hash_table;          				// Connect HT_Info with HashTable via pointer                                // Connect HT_info with Hashtable
 
 	BF_Block_SetDirty(header_block);
 	CALL_BF(BF_UnpinBlock(header_block));
@@ -76,7 +72,6 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 }
 
 HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
-
 	int filedesc;
 	CALL_BF(BF_OpenFile(fileName, &filedesc));
 	
@@ -119,8 +114,58 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 }
 
 HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
-	// int filedesc;
-	// filedesc = array.file_array[indexDesc];
+	HashTable* hash_table = global_array.file_array[indexDesc]->hash_table;
+	char string[32];
+	int global_depth = hash_table->global_depth;
+	strcpy(string, int_to_bi(record.id, global_depth));
+	for(int i = 0; i < (int)pow(2,global_depth); i++){
+		printf("loop%d\n", i);
+		printf("id: %s\n",string);
+		printf("%s\n",hash_table->table[i].id);
+		if(!strcmp(string, hash_table->table[i].id)) {
+			printf("inside\n");
+			if(hash_table->table[i].pointer == NULL) {
+				BF_Block *block = NULL;
+				BF_Block_Init(&block);
+				CALL_BF(BF_AllocateBlock(indexDesc, block));
+				hash_table->table[i].pointer = (Bucket*)(block);
+				hash_table->table[i].pointer->block = (BF_Block*)BF_Block_GetData(block);
+				HT_block_info* block_info;
+				char* data;
+				data = BF_Block_GetData(block);
+    			block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(block_info));
+
+				block_info->available_space = BF_BLOCK_SIZE - sizeof(block_info);
+				block_info->number_of_records = 0;
+				memcpy(data, &record, sizeof(record));
+				block_info->available_space = block_info->available_space - sizeof(record);
+				block_info->number_of_records++;
+				BF_Block_SetDirty(block);
+				printf("info1: %p\n",block_info);
+			}
+			else {
+				HT_block_info* block_info;
+				char* data;
+				data = (char*)(hash_table->table[i].pointer->block);
+				block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(block_info));
+				printf("info2: %p\n",block_info);
+				printf("ok\n");
+				printf("info %d\n",block_info->available_space);
+				if(sizeof(record) <= block_info->available_space){
+					memcpy(data + (block_info->number_of_records * sizeof(record)), &record, sizeof(record));
+					block_info->available_space = block_info->available_space - sizeof(record);
+					block_info->number_of_records++;
+					BF_Block_SetDirty(hash_table->table[i].pointer->block);
+				}
+			
+			}
+			break;		
+		}
+	}
+		//////////////////////////// for realloc ///////////////////
+	//hash_table->global_depth = hash_table->global_depth + 1;
+	//hash_table->table = (Directory *)realloc(hash_table->table, pow(2,hash_table->global_depth) * sizeof(int));
+	///////////////////////////////////////////////////////////
 	return HT_OK;
 }
 

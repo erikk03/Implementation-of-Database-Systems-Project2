@@ -1,9 +1,30 @@
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 // Function to convert a decimal to binary
-unsigned int int_to_bi(unsigned int k) {
-    return (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_bi(k / 2)));
+char* int_to_bi(unsigned int k, int depth) {
+    //return (k == 0 || k == 1 ? k : ((k % 2) + 10 * int_to_bi(k / 2)));
+    if (depth <= 0) {
+        printf("Invalid depth.\n");
+        return NULL;
+    }
+
+    char* string = (char*)malloc((depth + 1) * sizeof(char)); // +1 for null terminator
     
+    if (string == NULL) {
+        printf("Memory allocation failed.\n");
+        return NULL;
+    }
+
+    string[depth] = '\0'; // Null-terminate the string
+
+    for (int i = depth - 1; i >= 0; i--) {
+        int bit = (k >> i) & 1; // Extract bit at position i
+        string[depth - 1 - i] = bit + '0'; // Convert bit to character
+    }
+
+    return string;
 }
 
 // Hash function
