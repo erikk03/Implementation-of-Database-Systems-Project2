@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+//#include "hash_file.h"
 
 // Function to convert a decimal to binary
 char* int_to_bi(unsigned int k, int depth) {
@@ -40,3 +41,5 @@ unsigned int hash_function(const char *k){
     }  
     return current;  
 }
+
+//Directory* double_size(Directory* array, int depth);

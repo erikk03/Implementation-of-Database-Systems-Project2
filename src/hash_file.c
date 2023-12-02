@@ -107,6 +107,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 	BF_Block_Destroy(&block);
 
 	CALL_BF(BF_CloseFile(indexDesc));
+	
 	global_array.active_files_num--;
 	global_array.file_array[indexDesc] = NULL;
 
@@ -119,17 +120,16 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 	int global_depth = hash_table->global_depth;
 	strcpy(string, int_to_bi(record.id, global_depth));
 	for(int i = 0; i < (int)pow(2,global_depth); i++){
-		printf("loop%d\n", i);
-		printf("id: %s\n",string);
 		printf("%s\n",hash_table->table[i].id);
 		if(!strcmp(string, hash_table->table[i].id)) {
-			printf("inside\n");
 			if(hash_table->table[i].pointer == NULL) {
 				BF_Block *block = NULL;
 				BF_Block_Init(&block);
 				CALL_BF(BF_AllocateBlock(indexDesc, block));
 				hash_table->table[i].pointer = (Bucket*)(block);
 				hash_table->table[i].pointer->block = (BF_Block*)BF_Block_GetData(block);
+				hash_table->table[i].pointer->local_depth = hash_table->global_depth;
+				
 				HT_block_info* block_info;
 				char* data;
 				data = BF_Block_GetData(block);
@@ -141,21 +141,70 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 				block_info->available_space = block_info->available_space - sizeof(record);
 				block_info->number_of_records++;
 				BF_Block_SetDirty(block);
-				printf("info1: %p\n",block_info);
 			}
 			else {
 				HT_block_info* block_info;
 				char* data;
 				data = (char*)(hash_table->table[i].pointer->block);
 				block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(block_info));
-				printf("info2: %p\n",block_info);
-				printf("ok\n");
-				printf("info %d\n",block_info->available_space);
+				
 				if(sizeof(record) <= block_info->available_space){
 					memcpy(data + (block_info->number_of_records * sizeof(record)), &record, sizeof(record));
 					block_info->available_space = block_info->available_space - sizeof(record);
 					block_info->number_of_records++;
 					BF_Block_SetDirty(hash_table->table[i].pointer->block);
+				}
+				else{
+					BF_Block *new_block = NULL;
+					BF_Block_Init(&new_block);
+					CALL_BF(BF_AllocateBlock(indexDesc, new_block));
+					
+					HT_block_info* new_block_info;
+					char* data;
+					data = BF_Block_GetData(new_block);
+					block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(new_block_info));
+
+					block_info->available_space = BF_BLOCK_SIZE - sizeof(block_info);
+					block_info->number_of_records = 0;
+
+					if(hash_table->global_depth == hash_table->table[i].pointer->local_depth ) {
+						//bucket split
+						int previous_depth = hash_table->global_depth;
+						char previous_dir_id[32];
+						strcpy(previous_dir_id, hash_table->table[i].id);
+						
+						hash_table->global_depth++;
+						hash_table->table[i].pointer->local_depth++;
+						hash_table->table = (Directory *)realloc(hash_table->table, pow(2,hash_table->global_depth) * sizeof(int));
+						if (hash_table->table == NULL) {
+							fprintf(stderr, "Memory allocation failed\n");
+							return 1; 														// Exit with an error code
+						}
+						
+						//update directory ids
+						for(int i=0; i < (int)pow(2,hash_table->global_depth); i++){                              	// Hash table has 2^depth Directories
+							strcpy(hash_table->table[i].id, int_to_bi(i, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
+							
+						}
+						for(int i=(int)pow(2,previous_depth); i<(int)pow(2,hash_table->global_depth); i++){
+							if(strcmp(hash_table->table[i].id + 1, previous_dir_id) == 0){
+								hash_table->table[i].pointer = (Bucket*)new_block;
+								hash_table->table[i].pointer->block = (BF_Block*)BF_Block_GetData(new_block);
+								hash_table->table[i].pointer->local_depth++;
+
+							}else{
+								hash_table->table[i].pointer = NULL;
+							}
+							
+							
+						}
+						//vale neo record
+						//ftiakse ta palia me vash to neo id
+					}
+					else if(hash_table->global_depth > hash_table->table[i].pointer->local_depth) {
+						//bucket split
+						//local ++
+					}
 				}
 			
 			}
