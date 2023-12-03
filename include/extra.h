@@ -4,5 +4,8 @@ char* int_to_bi(unsigned int k, int depth);
 // Hash function
 unsigned int hash_function(const char *k);
 
+// Print a record
+void printRecord(Record record);
+
 // Free allocated memory for hash_table and each directory
 void free_memory(HashTable* hashtable, int depth);

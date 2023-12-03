@@ -43,7 +43,10 @@ unsigned int hash_function(const char *k){
     return current;  
 }
 
-//Directory* double_size(Directory* array, int depth);
+void printRecord(Record record){
+    printf("(%d,%s,%s,%s)\n",record.id,record.name,record.surname,record.city);
+
+}
 
 // Free allocated memory for hash_table and each directory
 void free_memory(HashTable* hashtable, int depth){

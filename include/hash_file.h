@@ -3,6 +3,7 @@
 #define HASH_FILE_H
 #define GLOBAL_DEPT 2 // you can change it if you want
 #define MAX_FILES 20
+#define RECORDS_NUM 100 // you can change it if you want
 
 typedef enum HT_ErrorCode {
   HT_OK,
@@ -17,7 +18,7 @@ typedef struct Record {
 } Record;
 
 typedef struct Bucket {
-	int local_depth;
+	//int local_depth;
 	BF_Block* block;
 } Bucket;
 
@@ -37,6 +38,7 @@ typedef struct HT_info {
 } HT_info;
 
 typedef struct block_info{
+	int local_depth;
 	int number_of_records;
 	int available_space;
 } HT_block_info;
@@ -101,5 +103,9 @@ HT_ErrorCode HT_PrintAllEntries(
 	int *id 				/* τιμή του πεδίου κλειδιού προς αναζήτηση */
 	);
 
+// Η συνάρτηση διαβάζει το αρχείο με όνομα filename και τυπώνει στατιστικά στοιχεία
+HT_ErrorCode HashStatistics(
+	char *fileName	/* όνομα του αρχείου που ενδιαφέρει */
+	);
 
 #endif // HASH_FILE_H
