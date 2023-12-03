@@ -28,7 +28,7 @@ typedef struct Directory {
 
 typedef struct HashTable {
   	int global_depth;
- 	Directory *table;
+ 	Directory* *table;
 } HashTable;
 
 typedef struct HT_info {

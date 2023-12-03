@@ -5,7 +5,7 @@
 #include "bf.h"
 #include "hash_file.h"
 
-#define RECORDS_NUM 50 // you can change it if you want
+#define RECORDS_NUM 1000 // you can change it if you want
 #define GLOBAL_DEPT 2 // you can change it if you want
 #define FILE_NAME "data.db"
 
@@ -52,16 +52,26 @@ const char* cities[] = {
 	"Miami"
 };
 
-#define CALL_OR_DIE(call)     \
-	{                           \
-		HT_ErrorCode code = call; \
-		if (code != HT_OK) {      \
-			printf("Error\n");      \
-			exit(code);             \
-		}                         \
+#define CALL_OR_DIE(call)     			\
+	{                           		\
+		HT_ErrorCode code = call; 		\
+		if (code != HT_OK) {      		\
+			printf("Error:%d\n", code); \
+			exit(code);             	\
+		}                         		\
 	}
 
 int main() {
+	// Delete the file before execution
+	// Remember to delete this, is just for testing
+	/////////////////////////////////////////////////
+    if (remove("data.db") == 0) {					\
+        printf("file deleted successfully.\n");		\
+    } else {										\
+        perror("Error deleting file");				\
+    }												\
+	/////////////////////////////////////////////////
+
 	BF_Init(LRU);
 	
 	CALL_OR_DIE(HT_Init());
@@ -95,4 +105,6 @@ int main() {
 
 	CALL_OR_DIE(HT_CloseFile(indexDesc));
 	BF_Close();
+
+	return 0;
 }

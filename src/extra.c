@@ -1,7 +1,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-//#include "hash_file.h"
+#include "bf.h"
+#include "hash_file.h"
 
 // Function to convert a decimal to binary
 char* int_to_bi(unsigned int k, int depth) {
@@ -43,3 +44,11 @@ unsigned int hash_function(const char *k){
 }
 
 //Directory* double_size(Directory* array, int depth);
+
+// Free allocated memory for hash_table and each directory
+void free_memory(HashTable* hashtable, int depth){
+    for(int i=0; i<(int)pow(2,depth); i++){
+        free(hashtable->table[i]);
+    }
+    free(hashtable->table);
+}
