@@ -13,6 +13,7 @@
 	BF_ErrorCode code = call; 	\
 	if (code != BF_OK) {      	\
 		BF_PrintError(code);  	\
+		printf("error_code:%d\n", code);\
 		return HT_ERROR;      	\
 	}                         	\
 }
@@ -242,14 +243,16 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 							memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
 							new_block_info->number_of_records;
 							new_block_info->available_space = new_block_info->available_space - sizeof(Record);
+							BF_Block_SetDirty(new_block);
 						}else{
 							// Insert to block2
 							memcpy(data2 + (new_block_info2->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
 							new_block_info2->number_of_records;
 							new_block_info2->available_space = new_block_info2->available_space - sizeof(Record);
+							BF_Block_SetDirty(new_block2);
 						}
 					}
-					BF_Block_Destroy(&hash_table->table[i]->pointer->block);			// Delete old block
+					//BF_Block_Destroy(&hash_table->table[i]->pointer->block);			// Delete old block
 
 					hash_table->table[i]->pointer = (Bucket*)new_block;
 					hash_table->table[i]->pointer->block = (BF_Block*)BF_Block_GetData(new_block);
@@ -259,10 +262,33 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 				else if(hash_table->global_depth > hash_table->table[i]->pointer->local_depth) {
 					//bucket split
 					//local ++
+					char* data = (char* )(hash_table->table[i]->pointer->block);
+					Record* temp_record =(Record*)(data);
+					for(int j = 0; j < block_info->number_of_records; j++) {
+						char temp[32];
+						strcpy(temp, int_to_bi(temp_record[j].id, global_depth));
+						
+						if(strcmp(temp,hash_table->table[i]->id) == 0) {
+							//Insert to block1
+							memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
+							new_block_info->number_of_records;
+							new_block_info->available_space = new_block_info->available_space - sizeof(Record);
+							BF_Block_SetDirty(new_block);
+						}else{
+							// Insert to block2
+							memcpy(data2 + (new_block_info2->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
+							new_block_info2->number_of_records;
+							new_block_info2->available_space = new_block_info2->available_space - sizeof(Record);
+							BF_Block_SetDirty(new_block2);
+						}
+					}
+					hash_table->table[i]->pointer = (Bucket*)new_block;
+					hash_table->table[i]->pointer->block = (BF_Block*)BF_Block_GetData(new_block);
+					hash_table->table[i]->pointer->local_depth++;
+					
 				}
 			}
-		
-		}	
+		}
 	}
 		
 	return HT_OK;

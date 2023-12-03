@@ -56,7 +56,7 @@ const char* cities[] = {
 	{                           		\
 		HT_ErrorCode code = call; 		\
 		if (code != HT_OK) {      		\
-			printf("Error:%d\n", code); \
+			printf("Error\n"); \
 			exit(code);             	\
 		}                         		\
 	}
