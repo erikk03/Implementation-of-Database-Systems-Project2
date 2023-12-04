@@ -47,7 +47,7 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	info = (HT_info*) BF_Block_GetData(header_block);						// Write HT_info to header_block of filename
 	info->id = file; 														// Id of file
 
-	HashTable* hash_table = (HashTable*)(info + sizeof(info));
+	HashTable* hash_table = (HashTable*)(info + sizeof(info));				// Write HashTable next to HT_info to header block of filename
 	hash_table->global_depth = depth;
 	hash_table->table = (Directory **)malloc(pow(2,hash_table->global_depth) * sizeof(Directory*));
 	
@@ -57,17 +57,17 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	}
 
 	for(int i=0; i < (int)pow(2,depth); i++){                              	// Hash table has 2^depth Directories
-		Directory *directory = (Directory*)malloc(sizeof(Directory));
+		Directory *directory = (Directory*)malloc(sizeof(Directory));		// Allocate each Directory that HashTable has
 		if (directory == NULL) {
 			fprintf(stderr, "Memory allocation failed\n");
 			return 1; 														// Exit with an error code
 		}
-		hash_table->table[i] = directory;
+		hash_table->table[i] = directory;									// Make table[i] to point to the Directory allocated
 		hash_table->table[i]->pointer = NULL;                               // NULL because no Buckets created yet
-		strcpy(hash_table->table[i]->id, int_to_bi(i, depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
+		strcpy(hash_table->table[i]->id, my_hash_func(i, depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
 	}
 																			
-	info->hash_table = hash_table;          				// Connect HT_Info with HashTable via pointer                                // Connect HT_info with Hashtable
+	info->hash_table = hash_table;          								// Connect HT_Info with HashTable via pointer
 
 	BF_Block_SetDirty(header_block);
 	CALL_BF(BF_UnpinBlock(header_block));
@@ -93,8 +93,8 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 	for(int i=0; i<MAX_OPEN_FILES; i++){
 		if(i == filedesc){                                                      // For file with filedesc == i
 			global_array.active_files_num++;
-			global_array.file_array[i] = ht_info;                                 // file_array[i] points to HT_info with filedesc == i
-			*indexDesc = i;                                                       // Returns indexDesc as the position of opened file in file_array
+			global_array.file_array[i] = ht_info;                               // file_array[i] points to HT_info with filedesc == i
+			*indexDesc = i;                                                     // Returns indexDesc as the position of opened file in file_array
 			break;
 		}
 	}
@@ -109,8 +109,8 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 	BF_Block *block = NULL;
 	BF_Block_Init(&block);
 
-	CALL_BF(BF_GetBlock(indexDesc, 0, block));							           	// Get the first block(file header)
-	CALL_BF(BF_UnpinBlock(block));													// Unpin the file header
+	CALL_BF(BF_GetBlock(indexDesc, 0, block));							         // Get the first block(file header)
+	CALL_BF(BF_UnpinBlock(block));												 // Unpin the file header
 		
 	BF_Block_Destroy(&block);
 
@@ -126,7 +126,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 	HashTable* hash_table = global_array.file_array[indexDesc]->hash_table;
 	char string[32];
 	int global_depth = hash_table->global_depth;
-	strcpy(string, int_to_bi(record.id, global_depth));
+	strcpy(string, my_hash_func(record.id, global_depth));
 	for(int i = 0; i < (int)pow(2,global_depth); i++){
 		//printf("%s\n",hash_table->table[i]->id);
 		if(strcmp(string, hash_table->table[i]->id) == 0 && hash_table->table[i]->pointer == NULL) {
@@ -227,7 +227,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 					}
 					// Update directory ids for every directory
 					for(int j=0; j < (int)pow(2,hash_table->global_depth); j++){                              	// Hash table has 2^depth Directories
-						strcpy(hash_table->table[j]->id, int_to_bi(j, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
+						strcpy(hash_table->table[j]->id, my_hash_func(j, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
 					
 					}
 
@@ -250,7 +250,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 					
 					for(int j = 0; j < block_info->number_of_records; j++) {
 						char temp[32];
-						strcpy(temp, int_to_bi(temp_record[j].id, global_depth));
+						strcpy(temp, my_hash_func(temp_record[j].id, global_depth));
 						
 						if(strcmp(temp,hash_table->table[i]->id) == 0) {
 							//Insert to block1
@@ -298,7 +298,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 					Record* temp_record =(Record*)(data);
 					for(int j = 0; j < block_info->number_of_records; j++) {
 						char temp[32];
-						strcpy(temp, int_to_bi(temp_record[j].id, global_depth));
+						strcpy(temp, my_hash_func(temp_record[j].id, global_depth));
 						
 						if(strcmp(temp,hash_table->table[i]->id) == 0) {
 							//Insert to block1
