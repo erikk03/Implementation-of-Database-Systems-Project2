@@ -64,7 +64,7 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 		}
 		hash_table->table[i] = directory;									// Make table[i] to point to the Directory allocated
 		hash_table->table[i]->pointer = NULL;                               // NULL because no Buckets created yet
-		strcpy(hash_table->table[i]->id, my_hash_func(i, depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
+		strcpy(hash_table->table[i]->id, int_to_bi(i, depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
 	}
 																			
 	info->hash_table = hash_table;          								// Connect HT_Info with HashTable via pointer
@@ -227,7 +227,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 					}
 					// Update directory ids for every directory
 					for(int j=0; j < (int)pow(2,hash_table->global_depth); j++){                              	// Hash table has 2^depth Directories
-						strcpy(hash_table->table[j]->id, my_hash_func(j, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
+						strcpy(hash_table->table[j]->id, int_to_bi(j, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
 					
 					}
 
@@ -303,19 +303,19 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 						if(strcmp(temp,hash_table->table[i]->id) == 0) {
 							//Insert to block1
 							memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
-							new_block_info->number_of_records;
+							new_block_info->number_of_records++;
 							new_block_info->available_space = new_block_info->available_space - sizeof(Record);
 							BF_Block_SetDirty(new_block);
 						}else{
 							// Insert to block2
 							memcpy(data2 + (new_block_info2->number_of_records * sizeof(Record)), &temp_record[j], sizeof(Record));
-							new_block_info2->number_of_records;
+							new_block_info2->number_of_records++;
 							new_block_info2->available_space = new_block_info2->available_space - sizeof(Record);
 							BF_Block_SetDirty(new_block2);
 						}
 					}
 					
-					// Copy the new record to 2nd block
+					// Copy the new record to 1nd block
 					memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &record, sizeof(Record));
 					new_block_info->number_of_records;
 					new_block_info->available_space = new_block_info->available_space - sizeof(Record);
@@ -325,7 +325,6 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 					hash_table->table[i]->pointer->block = (BF_Block*)BF_Block_GetData(new_block);
 					//hash_table->table[i]->pointer->local_depth++;
 					new_block_info->local_depth++;
-
 					
 				}
 			}

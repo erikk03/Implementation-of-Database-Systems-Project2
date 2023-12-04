@@ -18,7 +18,6 @@ typedef struct Record {
 } Record;
 
 typedef struct Bucket {
-	//int local_depth;
 	BF_Block* block;
 } Bucket;
 
