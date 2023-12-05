@@ -146,11 +146,12 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 			
 			HT_block_info* block_info;
 			char* data;
-			data = BF_Block_GetData(block);
+			data = (char*)hash_table->table[i]->pointer->block;
 			block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(block_info));
 
 			block_info->available_space = BF_BLOCK_SIZE - sizeof(block_info);
 			block_info->number_of_records = 0;
+			
 			memcpy(data, &record, sizeof(record));
 			block_info->available_space = block_info->available_space - sizeof(record);
 			block_info->number_of_records++;
@@ -173,7 +174,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 				BF_Block_SetDirty(hash_table->table[i]->pointer->block);
 				
 			}
-			else if(sizeof(record) > block_info->available_space && hash_table->global_depth == block_info->local_depth){
+			else if((sizeof(record) > block_info->available_space) && (hash_table->global_depth == block_info->local_depth)){
 				// If global depth == local depth => Bucket split AND resize hash table
 
 				int previous_depth = hash_table->global_depth;
@@ -207,7 +208,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 				CALL_OR_DIE(split_and_double(hash_table, hash_table->table[i]->pointer, indexDesc, record, 1));
 				
 			}
-			else if(sizeof(record) > block_info->available_space && hash_table->global_depth > block_info->local_depth) {
+			else if((sizeof(record) > block_info->available_space) &&(hash_table->global_depth > block_info->local_depth)) {
 
 				CALL_OR_DIE(bucket_split(hash_table, hash_table->table[i]->pointer, indexDesc, record, 0));
 				// remember to destroy old block
@@ -224,43 +225,33 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 	HT_block_info* block_info;
 	Record* record;
 
-	BF_Block *block = NULL;                                      					// Create block
-    BF_Block_Init(&block);
-    CALL_BF(BF_AllocateBlock(indexDesc, block)); 
-    
-    int blocks_number;																// Get number of blocks in file
-    CALL_BF(BF_GetBlockCounter(indexDesc, &blocks_number));
-
-
-	for(int i = 0; i < blocks_number; i++){
-		CALL_BF(BF_GetBlock(indexDesc, i, block));								// Get block i in file
-	
-		char* data = BF_Block_GetData(block);									// Get it's data
+	for(int i=0; i<pow(2,hash_table->global_depth); i++){
+		char* data = (char*)(hash_table->table[i]->pointer->block);					// Get it's data
 	
 		block_info = (HT_block_info*)(data + BF_BLOCK_SIZE -sizeof(block_info));
 		record =(Record*)(data);
-
-		for(int j = 0; j < block_info->number_of_records; j++) {				// For each record inside the block
+		for(int j = 0; j < block_info->number_of_records; j++) {					// For each record inside the block
 			if(id==NULL) {
 				printRecord(record[j]);
 				continue;
 			}else if(record[j].id == *id){
 				printRecord(record[j]);
 			}	
-		
 		}
-		CALL_BF(BF_UnpinBlock(block));													
+		printf("dir_id:%s->", hash_table->table[i]->id);
+		printf("adress: %p\n\n",data);
 	}
-	BF_Block_Destroy(&block);
+
 	
 	return HT_OK;
 	
 }
 
-HT_ErrorCode HashStatistics(char *fileName) {
-	int indexDesc;
-	CALL_BF(BF_OpenFile(fileName, &indexDesc));
+HT_ErrorCode HashStatistics(char *fileName, int indexDesc) {
+	
+	//CALL_BF(BF_OpenFile(fileName, &indexDesc));
 
+	HashTable* hash_table = global_array.file_array[indexDesc]->hash_table;
 	HT_block_info* block_info;
 	
 	int blocks_number;																// Get number of blocks in file
@@ -271,7 +262,7 @@ HT_ErrorCode HashStatistics(char *fileName) {
     CALL_BF(BF_AllocateBlock(indexDesc, block));
 
 	int min_rec = RECORDS_NUM;
-	float average_rec = RECORDS_NUM/blocks_number;
+	//float average_rec = RECORDS_NUM/blocks_number;
 	int max_rec = -1;
 	//check in the future i=0,i=1 , < , <=
 	for(int i = 0; i <= blocks_number; i++){
@@ -297,11 +288,10 @@ HT_ErrorCode HashStatistics(char *fileName) {
 	printf("\nSTATISTICS OF FILE:\"%s\"\n", fileName);
 	printf("Number of blocks:%d\n", blocks_number);
 	printf("Minimum number of records in a bucket:%d\n", min_rec);
-	printf("Average number of records:%f\n", average_rec);
+	//printf("Average number of records:%f\n", average_rec);
 	printf("Maximum number of records in a bucket:%d\n\n", max_rec);
 	
-	BF_Block_Destroy(&block);
-	CALL_BF(BF_CloseFile(indexDesc));
+	//CALL_BF(BF_CloseFile(indexDesc));
 	
 	return HT_OK;
 }

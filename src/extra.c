@@ -140,6 +140,8 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
         if(hash_table->table[i]->pointer == bucket){
             strcpy(temp_array[i], hash_table->table[i]->id);
             number_of_buddies ++;
+        }else{
+            strcpy(temp_array[i], "EMPTY");
         }
     }
     
@@ -148,9 +150,10 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
         // Loop to adjust half the directories that pointed to block_to_split, now make them point to new_block
         int changed_pointer = 0;                                                                                        // Number of pointers that have been changed
         for(int i=0; i<number_of_dir; i++){
-            for(int j=0; j<number_of_buddies; j++){
+            for(int j=0; j<number_of_dir; j++){
                 if((strcmp(hash_table->table[i]->id, temp_array[j]) == 0) && (changed_pointer < number_of_buddies/2)){  // If less than half of directories that point to a bucket have been changed
                     hash_table->table[i]->pointer = (Bucket*)new_block;                                                 // Make directory point to new_block
+                    hash_table->table[i]->pointer->block = (BF_Block*)data1;
                     strcpy(temp_array[j], "DONE");                                                                      // Check dir in array with buddies as DONE
                     changed_pointer ++;
                 }
@@ -158,9 +161,10 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
         }
         // Now we just want to make the other half directories to point to new_block2
         for(int i=0; i<number_of_dir; i++){
-            for(int j=0; j<number_of_buddies; j++) {
+            for(int j=0; j<number_of_dir; j++) {
                 if(strcmp(hash_table->table[i]->id, temp_array[j]) == 0) {
                     hash_table->table[i]->pointer = (Bucket*)new_block2;                                               // Make directory point to new_block
+                    hash_table->table[i]->pointer->block = (BF_Block*)data2;
                     strcpy(temp_array[j], "DONE");                                                                     // Check dir in array with buddies as DONE
                     changed_pointer ++;
                 }
@@ -235,8 +239,8 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
     }
 
     //MIN KSEXASOUME UNPIN DESTROY BLA BLA TOY PALIOU BLOCK POY ESPASE
-    // BF_UnpinBlock(bucket->block);
-	// BF_Block_Destroy(&bucket->block);
+    BF_UnpinBlock(bucket->block);
+	BF_Block_Destroy(&bucket->block);
 
     return HT_OK;
 }
@@ -280,26 +284,74 @@ HT_ErrorCode split_and_double(HashTable* hash_table, Bucket* bucket, int indexDe
     new_block_info2->number_of_records = 0;
     new_block_info2->local_depth = block_info->local_depth + 1;
     
-    int number_of_dir = (int)pow(2,hash_table->global_depth-1);
+    int number_of_dir = (int)pow(2,hash_table->global_depth);
     
     char foo_id[32];
+    // Connect new directories to buckets/blocks that existed before doubling the hash table
     for(int i=0; i<number_of_dir/2; i++){
         strcpy(foo_id, hash_table->table[i]->id + 1);
         for(int j=number_of_dir/2; j<number_of_dir; j++){
             
-            if(strcmp(foo_id, hash_table->table[j]->id +1) == 0){
+            if(strcmp(foo_id, hash_table->table[j]->id + 1) == 0){
                 hash_table->table[j]->pointer = hash_table->table[i]->pointer;
+                hash_table->table[j]->pointer->block = hash_table->table[i]->pointer->block;
             }   
         }
     }
+
+    // Find buddies of a bucket
+    char temp_array[number_of_dir][32];          // Temporary array to save id's of buddies
+    int number_of_buddies = 0;
+    
+    for(int i=0; i<number_of_dir; i++){
+        if(hash_table->table[i]->pointer == bucket){
+            strcpy(temp_array[i], hash_table->table[i]->id);
+            number_of_buddies ++;
+        }else{
+            strcpy(temp_array[i], "EMPTY");
+        }
+    }
+    
+
+    //if(number_of_buddies > 1){
+        // Loop to adjust half the directories that pointed to block_to_split, now make them point to new_block
+        int changed_pointer = 0;                                                                                        // Number of pointers that have been changed
+        for(int i=0; i<number_of_dir; i++){
+            for(int j=0; j<number_of_dir; j++){
+                if((strcmp(hash_table->table[i]->id, temp_array[j]) == 0) && (changed_pointer < number_of_buddies/2)){  // If less than half of directories that point to a bucket have been changed
+                    hash_table->table[i]->pointer = (Bucket*)new_block;                                                 // Make directory point to new_block
+                    hash_table->table[i]->pointer->block = (BF_Block*)data1;
+                    strcpy(temp_array[j], "DONE");                                                                      // Check dir in array with buddies as DONE
+                    changed_pointer ++;
+                }
+            } 
+        }
+        for(int i=0; i<number_of_dir; i++){
+            printf("%d:%s:%s\n", i, temp_array[i], hash_table->table[i]->id);
+        }
+        // Now we just want to make the other half directories to point to new_block2
+        for(int i=0; i<number_of_dir; i++){
+            for(int j=0; j<number_of_dir; j++) {
+                if(strcmp(hash_table->table[i]->id, temp_array[j]) == 0 ) {
+                    hash_table->table[i]->pointer = (Bucket*)new_block2;                                               // Make directory point to new_block
+                    hash_table->table[i]->pointer->block = (BF_Block*)data2;
+                    strcpy(temp_array[j], "DONE");                                                                     // Check dir in array with buddies as DONE
+                    changed_pointer ++;
+                }
+            }
+        }
+        for(int i=0; i<number_of_dir; i++){
+            printf("%d:%s:%s\n", i, temp_array[i], hash_table->table[i]->id);
+        }
+    //}
 
     // Divide records of block_to_split to two new blocks that we created
     for(int i=0; i<number_of_dir; i++){
         Record* record_to_move = (Record*)data;
         char temp[32];
         
-        for(int j=0; j<block_info->number_of_records; j++){
-            strcpy(temp, my_hash_func(record_to_move[j].id, block_info->local_depth + 1));
+        for(int j=0; j<block_info->number_of_records; j++){                                     // global_depth = block_info->local_depth + 1 at this point
+            strcpy(temp, my_hash_func(record_to_move[j].id, block_info->local_depth + 1));      // block_info->local_depth +1 beacause we hash based on local depth of new blocks
 
             if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == (Bucket*)new_block)){
                 memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &record_to_move[j], sizeof(Record));
@@ -360,8 +412,8 @@ HT_ErrorCode split_and_double(HashTable* hash_table, Bucket* bucket, int indexDe
     }
 
     //MIN KSEXASOUME UNPIN DESTROY BLA BLA TOY PALIOU BLOCK POY ESPASE
-    // BF_UnpinBlock(bucket->block);
-	// BF_Block_Destroy(&bucket->block);
+    BF_UnpinBlock(bucket->block);
+	BF_Block_Destroy(&bucket->block);
 
     return HT_OK;
 }
