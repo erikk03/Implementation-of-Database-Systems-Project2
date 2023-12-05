@@ -176,41 +176,15 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 			}
 			else if((sizeof(record) > block_info->available_space) && (hash_table->global_depth == block_info->local_depth)){
 				// If global depth == local depth => Bucket split AND resize hash table
-
-				int previous_depth = hash_table->global_depth;
-				char previous_dir_id[32];
-				strcpy(previous_dir_id, hash_table->table[i]->id);
 				
-				hash_table->global_depth++;
-				hash_table->table = (Directory **)realloc(hash_table->table, pow(2,hash_table->global_depth) * sizeof(Directory*));
-				if (hash_table->table == NULL) {
-					fprintf(stderr, "Memory allocation failed\n");
-					return 1; 																				// Exit with an error code
-				}
-				
-				// Allocate new directories created
-				for(int j=(int)pow(2,hash_table->global_depth)/2; j<(int)pow(2,hash_table->global_depth); j++){
-					Directory *directory = (Directory*)malloc(sizeof(Directory));
-					if (directory == NULL) {
-						fprintf(stderr, "Memory allocation failed\n");
-						return 1; 																			// Exit with an error code
-					}
-					hash_table->table[j] = directory;
-					hash_table->table[j]->pointer = NULL;
-				}
+				double_ht(hash_table);
 
-				// Update directory ids for every directory
-				for(int j=0; j < (int)pow(2,hash_table->global_depth); j++){                              	// Hash table has 2^depth Directories
-					strcpy(hash_table->table[j]->id, int_to_bi(j, hash_table->global_depth));				// Directory id in binary. e.x 00,01,10,11 for depth=2
-				
-				}
-
-				CALL_OR_DIE(split_and_double(hash_table, hash_table->table[i]->pointer, indexDesc, record, 1));
+				CALL_OR_DIE(bucket_split(hash_table, hash_table->table[i]->pointer, indexDesc, record));
 				
 			}
 			else if((sizeof(record) > block_info->available_space) &&(hash_table->global_depth > block_info->local_depth)) {
 
-				CALL_OR_DIE(bucket_split(hash_table, hash_table->table[i]->pointer, indexDesc, record, 0));
+				CALL_OR_DIE(bucket_split(hash_table, hash_table->table[i]->pointer, indexDesc, record));
 				// remember to destroy old block
 			}
 		}
@@ -238,8 +212,6 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 				printRecord(record[j]);
 			}	
 		}
-		printf("dir_id:%s->", hash_table->table[i]->id);
-		printf("adress: %p\n\n",data);
 	}
 
 	
