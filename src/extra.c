@@ -199,7 +199,8 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             strcpy(temp_array[i], "EMPTY");
         }
     }
-
+    printf("line202\n");
+    CALL_BF(BF_UnpinBlock(temp_block));
     //BF_Block_Destroy(&temp_block);
     
     // Loop to adjust half the directories that pointed to block_to_split, now make them point to new_block
@@ -229,7 +230,7 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             }
         }
     }
-
+    printf("line233\n");
     // Divide records of block_to_split to two new blocks that we created
     for(int i=0; i<number_of_dir; i++){
         Record* record_to_move = (Record*)data;
@@ -254,7 +255,7 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             }
         }
     }
-    
+    printf("line258\n");
     // Copy the record_to_insert where it belongs better, if there is available space in that block
     for(int i=0; i<number_of_dir; i++){
         char temp[32];
@@ -295,10 +296,12 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             }
         }
     }
-    BF_UnpinBlock(new_block);
+    printf("line300\n");
+    //BF_UnpinBlock(new_block);
 	// BF_Block_Destroy(&new_block);
-
-    BF_UnpinBlock(new_block2);
+    printf("line302\n");
+    //BF_UnpinBlock(new_block2);
+    printf("line304\n");
 	// BF_Block_Destroy(&new_block2);
 
     // BF_UnpinBlock(bf_block);

@@ -80,6 +80,7 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	info->hash_table = hash_table;          								// Connect HT_Info with HashTable via pointer
 
 	pos_array = (int*)malloc(pow(2,hash_table->global_depth)*sizeof(int));
+	
 	for(int i=0; i<pow(2,hash_table->global_depth); i++){
 		pos_array[i] = -1;
 	}
@@ -149,7 +150,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 	int global_depth = hash_table->global_depth;
 	strcpy(string, my_hash_func(record.id, global_depth));
 	for(int i = 0; i < (int)pow(2,global_depth); i++){
-
+// printf("%d,",i);
 		BF_Block* bf_block = NULL;
 		BF_Block_Init(&bf_block);
 
@@ -204,10 +205,10 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 				// If global depth == local depth => Bucket split AND resize hash table
 
 				double_ht(hash_table);
-
 				CALL_OR_DIE(bucket_split(hash_table, bf_block, indexDesc, record));
 				
-			}
+				
+			}	
 			else if((sizeof(record) > block_info->available_space) &&(hash_table->global_depth > block_info->local_depth)) {
 
 				CALL_OR_DIE(bucket_split(hash_table, bf_block, indexDesc, record));
@@ -215,12 +216,12 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 			}
 			
 			
-		 CALL_BF(BF_UnpinBlock(bf_block));
+		CALL_BF(BF_UnpinBlock(bf_block));
 		}
 		//printf("%d:line216\n", i);
 		// BF_Block_Destroy(&bf_block);
 	}
-
+	printf("\n");
 	return HT_OK;
 
 }
