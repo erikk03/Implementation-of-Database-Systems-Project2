@@ -8,7 +8,7 @@ char* int_to_bi(unsigned int k, int depth);
 char* my_hash_func(unsigned int k, int depth);
 
 // Function to split a bucket when there is no more available space to enter a new record
-HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, Record record);
+HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDesc, Record record);
 
 // Function that doubles the size of hash table
 void double_ht(HashTable* hash_table);

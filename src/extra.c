@@ -84,13 +84,13 @@ uint32_t hash_key(char* data, size_t bytes){
 // My hash function
 char* my_hash_func(unsigned int k, int depth){
 
-    //printf("k:%d\nbinary:%s\n", k, decimalToBinary(k));
     int capacity = pow(2,depth);
     uint32_t hash = hash_key(decimalToBinary(k), 32);
     unsigned int index = (unsigned int)(hash & (uint32_t)(capacity -1));
-    //printf("new_binary:%s\nreturn:%s\n", decimalToBinary(index), int_to_bi(index, depth));
     return int_to_bi(index, depth);
 }
+
+extern int* pos_array;
 
 // Double HashTable
 void double_ht(HashTable* hash_table){
@@ -101,6 +101,8 @@ void double_ht(HashTable* hash_table){
         exit(1); 																				// Exit with an error code
     }
     
+    pos_array = (int*)realloc(pos_array, pow(2,hash_table->global_depth) * sizeof(int));
+
     // Allocate new directories created
     for(int j=(int)pow(2,hash_table->global_depth)/2; j<(int)pow(2,hash_table->global_depth); j++){
         Directory *directory = (Directory*)malloc(sizeof(Directory));
@@ -129,22 +131,20 @@ void double_ht(HashTable* hash_table){
             if(strcmp(foo_id, hash_table->table[j]->id + 1) == 0){
                 hash_table->table[j]->pointer = hash_table->table[i]->pointer;
                 hash_table->table[j]->pointer->block = hash_table->table[i]->pointer->block;
+                pos_array[j] = pos_array[i];
             }   
         }
     }
 }
 
 // Bucket split
-HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, Record record_to_insert){
+HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDesc, Record record_to_insert){
 
-    // Take block and it's info that is going to be split
-    BF_Block* block_to_split = NULL;
-    BF_Block_Init(&block_to_split);
-    block_to_split = bucket->block;
-
+    int blocks_num;
+    
     HT_block_info* block_info;
     char* data;
-	data = (char*)(block_to_split);
+	data = BF_Block_GetData(bf_block);
 	block_info = (HT_block_info*)(data + BF_BLOCK_SIZE - sizeof(block_info));
 
     // Allocate the 2 new blocks to file
@@ -152,9 +152,14 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
     BF_Block_Init(&new_block);
     CALL_BF(BF_AllocateBlock(indexDesc, new_block));
     
+    BF_GetBlockCounter(indexDesc, &blocks_num);
+    int pos1 = blocks_num -1;
+    
     BF_Block *new_block2 = NULL;
     BF_Block_Init(&new_block2);
     CALL_BF(BF_AllocateBlock(indexDesc, new_block2));
+    BF_GetBlockCounter(indexDesc, &blocks_num);
+    int pos2 = blocks_num -1;
 
     // Take info for each block and initialize them
     HT_block_info* new_block_info;
@@ -164,6 +169,7 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
     new_block_info->available_space = BF_BLOCK_SIZE - sizeof(new_block_info);
     new_block_info->number_of_records = 0;
     new_block_info->local_depth = block_info->local_depth + 1;
+    BF_Block_SetDirty(new_block);
     
     HT_block_info* new_block_info2;
     char* data2;
@@ -172,24 +178,32 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
     new_block_info2->available_space = BF_BLOCK_SIZE - sizeof(new_block_info);
     new_block_info2->number_of_records = 0;
     new_block_info2->local_depth = block_info->local_depth + 1;
-    
+    BF_Block_SetDirty(new_block2);
+
     // Find buddies of a bucket
     int number_of_dir = (int)pow(2,hash_table->global_depth);
     char temp_array[number_of_dir][32];          // Temporary array to save id's of buddies
     int number_of_buddies = 0;
     
+    BF_Block* temp_block;
+    char* temp_data;
+
     for(int i=0; i<number_of_dir; i++){
-        if(hash_table->table[i]->pointer == bucket){
+        BF_Block_Init(&temp_block);
+        BF_GetBlock(indexDesc, pos_array[i], temp_block);
+        temp_data = BF_Block_GetData(temp_block);
+        if(temp_data == data){
             strcpy(temp_array[i], hash_table->table[i]->id);
             number_of_buddies ++;
         }else{
             strcpy(temp_array[i], "EMPTY");
         }
     }
+
+    //BF_Block_Destroy(&temp_block);
     
-    // If we don't want to double our hash table
     // Loop to adjust half the directories that pointed to block_to_split, now make them point to new_block
-    int changed_pointer = 0;                                                                                        // Number of pointers that have been changed
+    int changed_pointer = 0;                                                                                         // Number of pointers that have been changed
     for(int i=0; i<number_of_dir; i++){
         for(int j=0; j<number_of_dir; j++){
             if((strcmp(hash_table->table[i]->id, temp_array[j]) == 0) && (changed_pointer < number_of_buddies/2)){  // If less than half of directories that point to a bucket have been changed
@@ -197,6 +211,8 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
                 hash_table->table[i]->pointer->block = (BF_Block*)data1;
                 strcpy(temp_array[j], "DONE");                                                                      // Check dir in array with buddies as DONE
                 changed_pointer ++;
+                pos_array[i] = pos1;
+                // BF_Block_SetDirty((BF_Block*)hash_table->table[i]->pointer);
             }
         }
     }
@@ -208,6 +224,8 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
                 hash_table->table[i]->pointer->block = (BF_Block*)data2;
                 strcpy(temp_array[j], "DONE");                                                                     // Check dir in array with buddies as DONE
                 changed_pointer ++;
+                pos_array[i] = pos2;
+                // BF_Block_SetDirty((BF_Block*)hash_table->table[i]->pointer);
             }
         }
     }
@@ -277,10 +295,14 @@ HT_ErrorCode bucket_split(HashTable* hash_table, Bucket* bucket, int indexDesc, 
             }
         }
     }
+    BF_UnpinBlock(new_block);
+	// BF_Block_Destroy(&new_block);
 
-    //MIN KSEXASOUME UNPIN DESTROY BLA BLA TOY PALIOU BLOCK POY ESPASE
-    BF_UnpinBlock(bucket->block);
-	BF_Block_Destroy(&bucket->block);
+    BF_UnpinBlock(new_block2);
+	// BF_Block_Destroy(&new_block2);
+
+    // BF_UnpinBlock(bf_block);
+	// BF_Block_Destroy(&bf_block);
 
     return HT_OK;
 }
@@ -295,6 +317,7 @@ void printRecord(Record record){
 void free_memory(HashTable* hashtable, int depth){
     for(int i=0; i<(int)pow(2,depth); i++){
         free(hashtable->table[i]);
+        free(pos_array);
     }
     free(hashtable->table);
 }
