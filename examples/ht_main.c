@@ -62,15 +62,6 @@ const char* cities[] = {
 	}
 
 int main() {
-	// Delete the file before execution
-	// Remember to delete this, is just for testing
-	/////////////////////////////////////////////////
-    if (remove("data.db") == 0) {					\
-        printf("file deleted successfully.\n");		\
-    } else {										\
-        perror("Error deleting file");				\
-    }												\
-	/////////////////////////////////////////////////
 
 	BF_Init(LRU);
 	

@@ -42,7 +42,6 @@ HT_ErrorCode HT_Init() {
 }
 
 HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
-	//possible changes: , might need to change global_array
 	
 	CALL_BF(BF_CreateFile(filename));           			
 		
@@ -79,9 +78,9 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 																			
 	info->hash_table = hash_table;          								// Connect HT_Info with HashTable via pointer
 
-	pos_array = (int*)malloc(pow(2,hash_table->global_depth)*sizeof(int));
+	pos_array = (int*)malloc(pow(2,hash_table->global_depth)*sizeof(int));	// Allocate pos_array of size 2^global_depth 
 	
-	for(int i=0; i<pow(2,hash_table->global_depth); i++){
+	for(int i=0; i<pow(2,hash_table->global_depth); i++){					// Init values of pos_array
 		pos_array[i] = -1;
 	}
 
@@ -122,7 +121,6 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 }
 
 HT_ErrorCode HT_CloseFile(int indexDesc) {
-	// must unpin blocks that are unpined
 	BF_Block *block = NULL;
 	BF_Block_Init(&block);
 
@@ -133,6 +131,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 
 	CALL_BF(BF_CloseFile(indexDesc));
 	
+	// free memory that was allocated dynamically
 	free_memory(global_array.file_array[indexDesc]->hash_table, global_array.file_array[indexDesc]->hash_table->global_depth);
 	
 	global_array.active_files_num--;
@@ -149,6 +148,8 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 	char string[32] = {};
 	int global_depth = hash_table->global_depth;
 	strcpy(string, int_to_bi(record.id, global_depth));
+	
+	// For each directory
 	for(int i = 0; i < (int)pow(2,global_depth); i++){
 		BF_Block* bf_block = NULL;
 		BF_Block_Init(&bf_block);
@@ -156,6 +157,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 		HT_block_info* block_info;
 		char* data;
 
+		// If directory does not point to a block
 		if(strcmp(string, hash_table->table[i]->id) == 0 && hash_table->table[i]->pointer == NULL) {
 			CALL_BF(BF_AllocateBlock(indexDesc, bf_block));
 			hash_table->table[i]->pointer = bf_block;
@@ -180,7 +182,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 			// BF_Block_Destroy(&bf_block);
 
 		}
-		else if(strcmp(string, hash_table->table[i]->id) == 0 && hash_table->table[i]->pointer != NULL){
+		else if(strcmp(string, hash_table->table[i]->id) == 0 && hash_table->table[i]->pointer != NULL){	// If dir already points to a block
 			// block_info just to take available space
 
 			CALL_BF(BF_GetBlock(indexDesc, pos_array[i], bf_block));
@@ -212,9 +214,12 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 			}
 			
 		CALL_BF(BF_UnpinBlock(bf_block));
+
 		}
+
 		// CALL_BF(BF_UnpinBlock(bf_block));
 		// BF_Block_Destroy(&bf_block);
+
 	}
 	return HT_OK;
 
@@ -222,12 +227,16 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 
 HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
     HashTable* hash_table = global_array.file_array[indexDesc]->hash_table;
-    HT_block_info* block_info;
-    Record* record;
-BF_Block* block = NULL;
-BF_Block_Init(&block);
+	
+	BF_Block* block = NULL;
+	BF_Block_Init(&block);
+    
+	HT_block_info* block_info;
+    
+	Record* record;
+
     for(int i=0; i<pow(2,hash_table->global_depth); i++){
-		BF_GetBlock(indexDesc, pos_array[i], block);
+		BF_GetBlock(indexDesc, pos_array[i], block);								// Get block that dir with id=i points to
 		char* data = BF_Block_GetData(block);
 
         block_info = (HT_block_info*)(data + BF_BLOCK_SIZE -sizeof(block_info));
@@ -240,7 +249,6 @@ BF_Block_Init(&block);
                 printRecord(record[j]);
             }    
         }
-
 	}
 
     return HT_OK;
@@ -259,7 +267,7 @@ HT_ErrorCode HashStatistics(char *fileName) {
 
 	HT_block_info* block_info;
 	
-	int blocks_number;																// Get number of blocks in file
+	int blocks_number;
     CALL_BF(BF_GetBlockCounter(indexDesc, &blocks_number));
 
 	int min_rec = RECORDS_NUM;
