@@ -263,12 +263,13 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
                 new_block_info->number_of_records++;
                 new_block_info->available_space = new_block_info->available_space - sizeof(record_to_insert);
                 BF_Block_SetDirty(new_block);
-            }else{
-                // Otherwise copy to new_block2
-                memcpy(data2 + (new_block_info2->number_of_records * sizeof(Record)), &record_to_insert, sizeof(Record));
-                new_block_info2->number_of_records++;
-                new_block_info2->available_space = new_block_info2->available_space - sizeof(record_to_insert);
-                BF_Block_SetDirty(new_block2);
+            }
+            else if((new_block_info->available_space < sizeof(record_to_insert)) && (hash_table->global_depth == new_block_info->local_depth)){
+                double_ht(hash_table);
+                bucket_split(hash_table, new_block ,indexDesc, record_to_insert);
+            }
+            else if((new_block_info->available_space < sizeof(record_to_insert)) && (hash_table->global_depth > new_block_info->local_depth)){
+                bucket_split(hash_table, new_block ,indexDesc, record_to_insert);
             }
         }
         else if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == new_block2)){
@@ -280,12 +281,13 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
                 new_block_info2->number_of_records++;
                 new_block_info2->available_space = new_block_info2->available_space - sizeof(record_to_insert);
                 BF_Block_SetDirty(new_block2);
-            }else{
-                // Otherwise copy to new_block
-                memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &record_to_insert, sizeof(Record));
-                new_block_info->number_of_records++;
-                new_block_info->available_space = new_block_info->available_space - sizeof(record_to_insert);
-                BF_Block_SetDirty(new_block);
+            }
+            else if((new_block_info2->available_space < sizeof(record_to_insert)) && (hash_table->global_depth == new_block_info2->local_depth)){
+                double_ht(hash_table);
+                bucket_split(hash_table, new_block2 ,indexDesc, record_to_insert);
+            }
+            else if((new_block_info2->available_space < sizeof(record_to_insert)) && (hash_table->global_depth > new_block_info2->local_depth)){
+                bucket_split(hash_table, new_block2 ,indexDesc, record_to_insert);
             }
         }
     }
