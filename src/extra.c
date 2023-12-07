@@ -123,21 +123,20 @@ void double_ht(HashTable* hash_table){
     int number_of_dir = (int)pow(2,hash_table->global_depth);
 
     char foo_id[32];
-    // Connect new directories to buckets/blocks that existed before doubling the hash table
+    // Connect new directories to blocks that existed before doubling the hash table
     for(int i=0; i<number_of_dir/2; i++){
         strcpy(foo_id, hash_table->table[i]->id + 1);
         for(int j=number_of_dir/2; j<number_of_dir; j++){
             
             if(strcmp(foo_id, hash_table->table[j]->id + 1) == 0){
                 hash_table->table[j]->pointer = hash_table->table[i]->pointer;
-                hash_table->table[j]->pointer->block = hash_table->table[i]->pointer->block;
                 pos_array[j] = pos_array[i];
             }   
         }
     }
 }
 
-// Bucket split
+// Bucket/block split
 HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDesc, Record record_to_insert){
 
     int blocks_num;
@@ -155,7 +154,7 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
     BF_GetBlockCounter(indexDesc, &blocks_num);
     int pos1 = blocks_num -1;
     
-    BF_Block *new_block2 = NULL;
+    BF_Block* new_block2 = NULL;
     BF_Block_Init(&new_block2);
     CALL_BF(BF_AllocateBlock(indexDesc, new_block2));
     BF_GetBlockCounter(indexDesc, &blocks_num);
@@ -185,35 +184,28 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
     char temp_array[number_of_dir][32];          // Temporary array to save id's of buddies
     int number_of_buddies = 0;
     
-    BF_Block* temp_block;
     char* temp_data;
 
     for(int i=0; i<number_of_dir; i++){
-        BF_Block_Init(&temp_block);
-        BF_GetBlock(indexDesc, pos_array[i], temp_block);
-        temp_data = BF_Block_GetData(temp_block);
+        temp_data = BF_Block_GetData(hash_table->table[i]->pointer);
         if(temp_data == data){
             strcpy(temp_array[i], hash_table->table[i]->id);
             number_of_buddies ++;
         }else{
             strcpy(temp_array[i], "EMPTY");
         }
+    
     }
-    printf("line202\n");
-    CALL_BF(BF_UnpinBlock(temp_block));
-    //BF_Block_Destroy(&temp_block);
     
     // Loop to adjust half the directories that pointed to block_to_split, now make them point to new_block
     int changed_pointer = 0;                                                                                         // Number of pointers that have been changed
     for(int i=0; i<number_of_dir; i++){
         for(int j=0; j<number_of_dir; j++){
             if((strcmp(hash_table->table[i]->id, temp_array[j]) == 0) && (changed_pointer < number_of_buddies/2)){  // If less than half of directories that point to a bucket have been changed
-                hash_table->table[i]->pointer = (Bucket*)new_block;                                                 // Make directory point to new_block
-                hash_table->table[i]->pointer->block = (BF_Block*)data1;
+                hash_table->table[i]->pointer = new_block;                                                          // Make directory point to new_block
                 strcpy(temp_array[j], "DONE");                                                                      // Check dir in array with buddies as DONE
                 changed_pointer ++;
                 pos_array[i] = pos1;
-                // BF_Block_SetDirty((BF_Block*)hash_table->table[i]->pointer);
             }
         }
     }
@@ -221,32 +213,30 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
     for(int i=0; i<number_of_dir; i++){
         for(int j=0; j<number_of_dir; j++) {
             if(strcmp(hash_table->table[i]->id, temp_array[j]) == 0) {
-                hash_table->table[i]->pointer = (Bucket*)new_block2;                                               // Make directory point to new_block
-                hash_table->table[i]->pointer->block = (BF_Block*)data2;
+                hash_table->table[i]->pointer = new_block2;                                                        // Make directory point to new_block
                 strcpy(temp_array[j], "DONE");                                                                     // Check dir in array with buddies as DONE
                 changed_pointer ++;
                 pos_array[i] = pos2;
-                // BF_Block_SetDirty((BF_Block*)hash_table->table[i]->pointer);
             }
         }
     }
-    printf("line233\n");
+
     // Divide records of block_to_split to two new blocks that we created
     for(int i=0; i<number_of_dir; i++){
         Record* record_to_move = (Record*)data;
         char temp[32];
         
         for(int j=0; j<block_info->number_of_records; j++){
-            strcpy(temp, my_hash_func(record_to_move[j].id, block_info->local_depth + 1));
+            strcpy(temp, int_to_bi(record_to_move[j].id, block_info->local_depth + 1));
 
-            if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == (Bucket*)new_block)){
+            if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == new_block)){
                 memcpy(data1 + (new_block_info->number_of_records * sizeof(Record)), &record_to_move[j], sizeof(Record));
                 new_block_info->number_of_records++;
                 new_block_info->available_space = new_block_info->available_space - sizeof(Record);
                 BF_Block_SetDirty(new_block);
                 
             }
-            else if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == (Bucket*)new_block2)){
+            else if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == new_block2)){
                 memcpy(data2 + (new_block_info2->number_of_records * sizeof(Record)), &record_to_move[j], sizeof(Record));
                 new_block_info2->number_of_records++;
                 new_block_info2->available_space = new_block_info2->available_space - sizeof(Record);
@@ -255,13 +245,13 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             }
         }
     }
-    printf("line258\n");
+
     // Copy the record_to_insert where it belongs better, if there is available space in that block
     for(int i=0; i<number_of_dir; i++){
         char temp[32];
-        strcpy(temp, my_hash_func(record_to_insert.id, block_info->local_depth + 1));
+        strcpy(temp, int_to_bi(record_to_insert.id, block_info->local_depth + 1));
 
-        if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == (Bucket*)new_block)){
+        if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == new_block)){
             
             // If there is available space in new_block
             if(new_block_info->available_space >= sizeof(record_to_insert)){
@@ -278,7 +268,7 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
                 BF_Block_SetDirty(new_block2);
             }
         }
-        else if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == (Bucket*)new_block2)){
+        else if(strcmp(hash_table->table[i]->id, temp) == 0 && (hash_table->table[i]->pointer == new_block2)){
             
             //If there is available space in new_block2
             if(new_block_info2->available_space >= sizeof(record_to_insert)){
@@ -296,12 +286,11 @@ HT_ErrorCode bucket_split(HashTable* hash_table, BF_Block* bf_block, int indexDe
             }
         }
     }
-    printf("line300\n");
-    //BF_UnpinBlock(new_block);
+
+    // BF_UnpinBlock(new_block);
 	// BF_Block_Destroy(&new_block);
-    printf("line302\n");
-    //BF_UnpinBlock(new_block2);
-    printf("line304\n");
+
+    // BF_UnpinBlock(new_block2);
 	// BF_Block_Destroy(&new_block2);
 
     // BF_UnpinBlock(bf_block);

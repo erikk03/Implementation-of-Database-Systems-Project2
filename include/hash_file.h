@@ -3,7 +3,7 @@
 #define HASH_FILE_H
 #define GLOBAL_DEPT 2 // you can change it if you want
 #define MAX_FILES 20
-#define RECORDS_NUM 600 // you can change it if you want
+#define RECORDS_NUM 500 // you can change it if you want
 
 typedef enum HT_ErrorCode {
   HT_OK,
@@ -17,13 +17,9 @@ typedef struct Record {
 	char city[20];
 } Record;
 
-typedef struct Bucket {
-	BF_Block* block;
-} Bucket;
-
 typedef struct Directory {
 	char id[32];
-	Bucket* pointer;
+	BF_Block* pointer;
 } Directory;
 
 typedef struct HashTable {
