@@ -311,5 +311,4 @@ void free_memory(HashTable* hashtable, int depth){
         free(hashtable->table[i]);
         free(pos_array);
     }
-    free(hashtable->table);
 }

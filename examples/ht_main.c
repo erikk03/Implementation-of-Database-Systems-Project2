@@ -6,7 +6,7 @@
 #include "hash_file.h"
 
 //RECORDS_NUM MOVED TO .h
-#define GLOBAL_DEPT 2 // you can change it if you want
+#define GLOBAL_DEPT 1 // you can change it if you want
 #define FILE_NAME "data.db"
 
 const char* names[] = {
@@ -99,14 +99,14 @@ int main() {
 
 	printf("RUN PrintAllEntries\n");
 	int id = rand() % RECORDS_NUM;
-	//CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
+	// CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
 	CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
 
 	
 	
 	CALL_OR_DIE(HT_CloseFile(indexDesc));
 
-	//CALL_OR_DIE(HashStatistics(FILE_NAME));
+	CALL_OR_DIE(HashStatistics(FILE_NAME));
 
 	BF_Close();
 

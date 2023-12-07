@@ -1,7 +1,7 @@
 #include <math.h>
 #ifndef HASH_FILE_H
 #define HASH_FILE_H
-#define GLOBAL_DEPT 2 // you can change it if you want
+#define GLOBAL_DEPT 1 // you can change it if you want
 #define MAX_FILES 20
 #define RECORDS_NUM 500 // you can change it if you want
 
